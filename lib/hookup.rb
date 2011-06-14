@@ -84,9 +84,13 @@ class Hookup
   def migrate(old, new, *args)
     return if args.first == '0'
 
-    schema = %x{git diff --name-status #{old} #{new} -- db/schema.rb}
-    if schema =~ /^A/
-      system 'bundle', 'exec', 'rake', 'db:create'
+    %w{db/schema.rb db/development_structure.sql}.each do |schema|
+      if %x{git ls-files -- #{schema}}.chomp != ""
+        if %x{git diff --name-status #{old} #{new} -- #{schema}} =~ /^A/
+          system 'bundle', 'exec', 'rake', 'db:create'
+        end
+        @schema = schema
+      end
     end
 
     migrations = %x{git diff --name-status #{old} #{new} -- db/migrate}.scan(/.+/).map {|l| l.split(/\t/) }
@@ -111,7 +115,7 @@ class Hookup
       end
 
     ensure
-      system 'git', 'checkout', '--', 'db/schema.rb' if migrations.any?
+      system 'git', 'checkout', '--', @schema if @schema && migrations.any?
     end
   end
 
