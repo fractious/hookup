@@ -86,7 +86,7 @@ class Hookup
 
     schema = %x{git diff --name-status #{old} #{new} -- db/schema.rb}
     if schema =~ /^A/
-      system 'rake', 'db:create'
+      system 'bundle', 'exec', 'rake', 'db:create'
     end
 
     migrations = %x{git diff --name-status #{old} #{new} -- db/migrate}.scan(/.+/).map {|l| l.split(/\t/) }
@@ -94,7 +94,7 @@ class Hookup
       migrations.select {|(t,f)| %w(D M).include?(t)}.reverse.each do |type, file|
         begin
           system 'git', 'checkout', old, '--', file
-          unless system 'rake', 'db:migrate:down', "VERSION=#{File.basename(file)}"
+          unless system 'bundle', 'exec', 'rake', 'db:migrate:down', "VERSION=#{File.basename(file)}"
             raise Error, "Failed to rollback #{File.basename(file)}. Consider rake db:setup"
           end
         ensure
@@ -107,7 +107,7 @@ class Hookup
       end
 
       if migrations.any? {|(t,f)| %w(A M).include?(t)}
-        system 'rake', 'db:migrate'
+        system 'bundle', 'exec', 'rake', 'db:migrate'
       end
 
     ensure
